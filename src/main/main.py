@@ -13,6 +13,7 @@ from kivymd.uix.behaviors.elevation import CommonElevationBehavior
 
 # SpeechApp için import (kodunuzu içe aktarıyoruz)
 from SpeechRecognation.Speech_Page import SpeechApp
+from OCR.OCR_Page import OCRApp
 
 # Ana ekran ve butonlar için KV dili tanımı
 KV = '''
@@ -126,7 +127,7 @@ class MainApp(MDApp):
             icon="text-recognition", 
             text="OCR Aracı", 
             description="Görselden metin tanıma uygulaması",
-            screen_cls=None,  # Gerçek OCR uygulamanızı buraya ekleyin
+            screen_cls=OCRApp,  # Gerçek OCR uygulamanızı buraya ekleyin
             screen_name="ocr_app"
         )
         
