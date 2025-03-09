@@ -14,6 +14,7 @@ from kivymd.uix.behaviors.elevation import CommonElevationBehavior
 # SpeechApp için import (kodunuzu içe aktarıyoruz)
 from SpeechRecognation.Speech_Page import SpeechApp
 from OCR.OCR_Page import OCRApp
+from Text.Text_Page import TranslateApp
 
 # Ana ekran ve butonlar için KV dili tanımı
 KV = '''
@@ -136,7 +137,7 @@ class MainApp(MDApp):
             icon="translate", 
             text="Çeviri Aracı", 
             description="Metni farklı dillere çevirme uygulaması",
-            screen_cls=None,  # Gerçek çeviri uygulamanızı buraya ekleyin
+            screen_cls=TranslateApp,  # Gerçek çeviri uygulamanızı buraya ekleyin
             screen_name="translate_app"
         )
         
