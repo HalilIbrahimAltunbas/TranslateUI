@@ -15,7 +15,9 @@ from kivymd.uix.behaviors.elevation import CommonElevationBehavior
 from SpeechRecognation.Speech_Page import SpeechApp
 from OCR.OCR_Page import OCRApp
 from Text.Text_Page import TranslateApp
-
+from Registiration.SignUp import SignUp  
+from Registiration.SignIn import SignIn 
+from Registiration.Password import Password 
 # Ana ekran ve butonlar için KV dili tanımı
 KV = '''
 <MenuButton>:
@@ -110,11 +112,15 @@ class MainApp(MDApp):
         self.setup_menu_items()
         self.populate_menu()
         
+        
         return self.screen_manager
     
     def setup_menu_items(self):
         """Menü öğelerini yapılandırır."""
         # Menü öğesi eklemek için burayı kullanabilirsiniz
+
+        
+        
         self.add_menu_item(
             icon="microphone", 
             text="Ses Tanıma", 
@@ -223,8 +229,9 @@ class MainApp(MDApp):
             self.current_screen = screen_name
             
         except Exception as e:
-            from kivymd.uix.snackbar import Snackbar
-            Snackbar(text=f"Hata: {e}").open()
+            from components.SnackBar import SnackBar
+            SnackBar.callSnackBar(text=f"Hata: {e}",bg_color=self.theme_cls.primary_color)
+            # Snackbar(text=f"Hata: {e}").open()
     
     def show_about(self):
         """Uygulama hakkında bilgi gösterir."""
