@@ -12,7 +12,7 @@ from kivymd.uix.behaviors import RectangularRippleBehavior
 from kivymd.uix.behaviors.elevation import CommonElevationBehavior
 
 # SpeechApp için import (kodunuzu içe aktarıyoruz)
-# from Speech_app import SpeechApp
+from SpeechRecognation.Speech_Page import SpeechApp
 
 # Ana ekran ve butonlar için KV dili tanımı
 KV = '''
@@ -117,7 +117,7 @@ class MainApp(MDApp):
             icon="microphone", 
             text="Ses Tanıma", 
             description="Konuşmayı metne çevirme uygulaması",
-            screen_cls=None,
+            screen_cls=SpeechApp,
             screen_name="speech_app"
         )
         

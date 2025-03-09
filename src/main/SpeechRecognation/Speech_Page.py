@@ -1,3 +1,4 @@
+# speech_app.py - Ana Menü ile kullanılması için önceki kodumuzu modül olarak ayarlıyoruz
 from kivymd.app import MDApp
 from kivymd.uix.screen import MDScreen
 from kivymd.uix.button import MDRaisedButton
@@ -14,7 +15,6 @@ import requests
 from kivymd.uix.snackbar import Snackbar
 import os
 import platform
-import wave
 import tempfile
 
 # Platform kontrolü
@@ -34,7 +34,8 @@ else:
     import wave
     file_path = tempfile.gettempdir()  # Geçici dosya dizini
 
-KV = '''
+# Speech App KV
+SPEECH_KV = '''
 <RecordCard>:
     orientation: "vertical"
     padding: "16dp"
@@ -74,18 +75,18 @@ KV = '''
         MDRaisedButton:
             id: start_button
             text: "Konuşmayı Başlat"
-            on_release: app.start_recording()
+            on_release: app.speech_app.start_recording()
             md_bg_color: app.theme_cls.primary_color
             
         MDRaisedButton:
             id: stop_button
             text: "Durdur"
             disabled: True
-            on_release: app.stop_recording()
+            on_release: app.speech_app.stop_recording()
             md_bg_color: app.theme_cls.accent_color
 
 MDScreen:
-    md_bg_color: app.theme_cls.bg_normal
+    name: "speech_app"
     
     MDBoxLayout:
         orientation: "vertical"
@@ -94,7 +95,8 @@ MDScreen:
         
         MDTopAppBar:
             title: "Ses Tanıma Uygulaması"
-            right_action_items: [["cog", lambda x: app.show_settings_dialog()]]
+            left_action_items: [["arrow-left", lambda x: app.back_to_menu()]]
+            right_action_items: [["cog", lambda x: app.speech_app.show_settings_dialog()]]
             elevation: 4
         
         RecordCard:
@@ -106,13 +108,14 @@ MDScreen:
 class RecordCard(MDCard, CommonElevationBehavior):
     pass
 
-class SpeechApp(MDApp):
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
+class SpeechApp:
+    def __init__(self):
         self._url = "127.0.0.1"  # Varsayılan olarak localhost
         self.recording = False
         self.recorder = None
         self.settings_dialog = None
+        self.app = MDApp.get_running_app()
+        self.root = None
         
         # Windows için ses kaydetme değişkenleri
         if not IS_ANDROID:
@@ -126,10 +129,10 @@ class SpeechApp(MDApp):
             self.output_filename = join(file_path, "test.wav")
 
     def build(self):
-        self.theme_cls.primary_palette = "Blue"
-        self.theme_cls.accent_palette = "Red"
-        self.theme_cls.theme_style = "Light"
-        return Builder.load_string(KV)
+        self.root = Builder.load_string(SPEECH_KV)
+        # Ana uygulamada kullanılabilmek için kendimize bir referans koy
+        self.app.speech_app = self
+        return self.root
     
     def start_recording(self):
         try:
@@ -291,8 +294,5 @@ class SpeechApp(MDApp):
             snackbar_x="10dp",
             snackbar_y="10dp",
             size_hint_x=0.7,
-            bg_color=self.theme_cls.primary_color,
+            bg_color=self.app.theme_cls.primary_color,
         ).open()
-        
-if __name__ == "__main__":
-    SpeechApp().run()
