@@ -286,13 +286,15 @@ class SpeechApp:
             )
         self.settings_dialog.open()
     
-    def save_settings(self):
+    def save_settings(self): 
+        from components.SnackBar import SnackBar
         self._url = self.settings_field.text
         self.settings_dialog.dismiss()
-        Snackbar(
-            text="Ayarlar kaydedildi",
-            snackbar_x="10dp",
-            snackbar_y="10dp",
-            size_hint_x=0.7,
-            bg_color=self.app.theme_cls.primary_color,
-        ).open()
+        SnackBar.callSnackBar(text="Ayarlar kaydedildi",bg_color=self.app.theme_cls.primary_color)
+        # Snackbar(
+        #     text="Ayarlar kaydedildi",
+        #     snackbar_x="10dp",
+        #     snackbar_y="10dp",
+        #     size_hint_x=0.7,
+        #     bg_color=self.app.theme_cls.primary_color,
+        # ).open()

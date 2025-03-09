@@ -207,6 +207,8 @@ class OCRApp:
             self.camera.play = True
             
     def show_settings_dialog(self):
+        # from components.SettingsModal import Dialog
+        # Dialog.show_settings_dialog(self)
         """Ayarlar dialogunu gösterir"""
         from kivymd.uix.dialog import MDDialog
         from kivymd.uix.textfield import MDTextField
@@ -245,14 +247,9 @@ class OCRApp:
     
     def save_settings(self):
         """Ayarları kaydeder"""
-        from kivymd.uix.snackbar import Snackbar
-        
+        # from kivymd.uix.snackbar import Snackbar
+        from components.SnackBar import SnackBar 
         self._url = self.settings_field.text
         self.settings_dialog.dismiss()
-        Snackbar(
-            text="Ayarlar kaydedildi",
-            snackbar_x="10dp",
-            snackbar_y="10dp",
-            size_hint_x=0.7,
-            bg_color=self.app.theme_cls.primary_color,
-        ).open()
+        SnackBar.callSnackBar(text="Ayarlar kaydedildi",bg_color=self.app.theme_cls.primary_color)
+        
