@@ -7,8 +7,9 @@ from kivymd.uix.textfield import MDTextField
 from kivymd.uix.label import MDLabel
 from kivymd.uix.boxlayout import MDBoxLayout
 from kivymd.uix.dialog import MDDialog
-from kivymd.uix.snackbar import Snackbar
-from kivymd.uix.snackbar.snackbar import MDSnackbar,MDLabel 
+# from kivymd.uix.snackbar import Snackbar
+# from kivymd.uix.snackbar.snackbar import MDSnackbar,MDLabel 
+from components.SnackBar import SnackBar
 import requests
 
 # Çeviri App KV
@@ -143,12 +144,5 @@ class TranslateApp:
         """Ayarları kaydeder"""
         self._url = self.settings_field.text
         self.settings_dialog.dismiss()
-        MDSnackbar(
-            MDLabel(
-                text="Ayarlar kaydedildi",
-            ),
-            snackbar_x="10dp",
-            snackbar_y="10dp",
-            size_hint_x=0.7,
-            _md_bg_color=self.app.theme_cls.primary_color,
-        ).open()
+        SnackBar.callSnackBar(text="Ayarlar kaydedildi",bg_color=self.app.theme_cls.primary_color)
+       
