@@ -105,6 +105,7 @@ class OCRApp:
         self.captured_image_data = None
         self.settings_dialog = None
         
+        
     def build(self):
         self.root = Builder.load_string(OCR_KV)
         
