@@ -103,17 +103,31 @@ class MainApp(MDApp):
         
         # Ekran yöneticisi oluştur
         self.screen_manager = MDScreenManager()
+        self.sign_in_screen()
+        # Ana ekranı oluştur
+        # main_screen = Builder.load_string(KV)
+        # self.screen_manager.add_widget(main_screen)
         
+        # Menü öğelerini ekle
+        # self.setup_menu_items()
+        # self.populate_menu()
+        
+        
+        return self.screen_manager
+    
+    def sign_in_screen(self):
+        self.load_screen(SignIn,'sign_in_screen')
+
+    def load_menu(self):
         # Ana ekranı oluştur
         main_screen = Builder.load_string(KV)
+        self.screen_manager.clear_widgets()
         self.screen_manager.add_widget(main_screen)
+        
         
         # Menü öğelerini ekle
         self.setup_menu_items()
         self.populate_menu()
-        
-        
-        return self.screen_manager
     
     def setup_menu_items(self):
         """Menü öğelerini yapılandırır."""
