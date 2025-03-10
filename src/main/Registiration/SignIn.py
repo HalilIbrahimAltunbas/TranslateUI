@@ -8,6 +8,7 @@ from kivymd.uix.card import MDCard
 from kivymd.uix.dialog import MDDialog
 from kivy.lang import Builder
 from components.SnackBar import SnackBar
+
 import requests
 import threading
 
@@ -142,22 +143,23 @@ class SignIn:
     def signin(self):
         """Kullanıcı giriş işlemini yapar"""
         try:
-            email = self.root.ids.auth_screen_manager.get_screen("signin_screen").ids.email_field.text
-            password = self.root.ids.auth_screen_manager.get_screen("signin_screen").ids.password_field.text
+            email = self.root.ids.email_field.text
+            password = self.root.ids.password_field.text
             
             if not email.strip() or not password.strip():
                 SnackBar.callSnackBar(text="Lütfen e-posta ve şifre girin", bg_color=self.app.theme_cls.error_color)
                 return
             
             # API'ye istek gönder (gerçek implementasyon için)
-            url = f"http://{self._url}:5000/auth/signin"
+            # url = f"http://{self._url}:5000/auth/signin"
             # response = requests.post(url, json={"email": email, "password": password})
             
             # Şimdilik basit bir simülasyon
             if email and password:
                 SnackBar.callSnackBar(text="Giriş başarılı!", bg_color=self.app.theme_cls.primary_color)
                 # Başarılı girişten sonra ana menüye yönlendirme
-                self.app.back_to_menu()
+                # self.app.back_to_menu()
+                self.app.load_menu()
             else:
                 SnackBar.callSnackBar(text="Giriş başarısız. Bilgilerinizi kontrol edin.", bg_color=self.app.theme_cls.error_color)
                 
@@ -167,6 +169,8 @@ class SignIn:
     def google_signin(self):
         """Google ile giriş işlemini gerçekleştirir"""
         SnackBar.callSnackBar(text="Google ile giriş işlemi başlatılıyor...", bg_color=self.app.theme_cls.primary_color)
+        from Registiration.google_oauth import google_signin
+        google_signin(self)
         # Bu fonksiyon Google OAuth entegrasyonu gerektirir (ileride implementasyonu yapılacak)
 
     def show_settings_dialog(self):
