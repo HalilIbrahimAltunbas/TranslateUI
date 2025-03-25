@@ -6,8 +6,14 @@ from kivymd.uix.label import MDLabel
 from kivymd.uix.boxlayout import MDBoxLayout
 from kivymd.uix.card import MDCard
 from kivymd.uix.dialog import MDDialog
+# from kivymd.uix.
 from kivy.lang import Builder
+from kivy.clock import Clock
 from components.SnackBar import SnackBar
+from config import config_reader
+	
+# Import the auth client
+from Registiration.AuthClient import auth_client
 
 import requests
 import threading
@@ -50,8 +56,11 @@ MDScreen:
                     helper_text_mode: "on_focus"
                     icon_right: "email"
                     mode: "rectangle"
+
+                
                     
                 MDTextField:
+                    mode: "rectangle"
                     id: password_field
                     hint_text: "Şifre"
                     helper_text: "Şifrenizi giriniz"
@@ -60,6 +69,13 @@ MDScreen:
                     mode: "rectangle"
                     password: True
                     
+                    
+                    
+
+                    
+
+                
+
                 MDBoxLayout:
                     adaptive_height: True
                     
@@ -111,7 +127,9 @@ class SignInScreen(MDScreen):
 class SignIn:
 
     def __init__(self):
-        self._url = "127.0.0.1"  # Varsayılan olarak localhost
+        
+        
+        self._url = config_reader.get_config_value('route')# "127.0.0.1"  # Varsayılan olarak localhost
         self.app = MDApp.get_running_app()
         self.root = None
         self.settings_dialog = None
@@ -119,11 +137,20 @@ class SignIn:
 
     def build(self):
         self.root = Builder.load_string(SignIn_KV)
-        
         # Ana uygulamada kullanılabilmek için kendimize bir referans koy
         self.app.sign_in_app = self
         
+        
+       
+        # Check if user is already authenticated
+        if auth_client.is_authenticated():
+            # Redirect to main menu if already logged in
+            
+            Clock.schedule_once(lambda dt: self.app.load_menu(), 0.1)
+
         return self.root
+    
+        
     
     # def goto_signin(self):
     #     """Sign In ekranına geçiş yapar"""
@@ -136,9 +163,13 @@ class SignIn:
         self.app.load_screen(SignUp, 'signup_screen')
 
     def  goto_forgot_password(self):
-        """Sign Up ekranına geçiş yapar"""
+        """Forgot Password ekranına geçiş yapar"""
         from Registiration.Password import Password
+        
         self.app.load_screen(Password, 'forgot_password_screen')
+
+    def test(self):
+        print("çalıştı")
 
     def signin(self):
         """Kullanıcı giriş işlemini yapar"""
@@ -146,16 +177,18 @@ class SignIn:
             email = self.root.ids.email_field.text
             password = self.root.ids.password_field.text
             
+            
             if not email.strip() or not password.strip():
                 SnackBar.callSnackBar(text="Lütfen e-posta ve şifre girin", bg_color=self.app.theme_cls.error_color)
                 return
+            
             
             # API'ye istek gönder (gerçek implementasyon için)
             # url = f"http://{self._url}:5000/auth/signin"
             # response = requests.post(url, json={"email": email, "password": password})
             
             # Şimdilik basit bir simülasyon
-            if email and password:
+            if auth_client.signin(email, password):
                 SnackBar.callSnackBar(text="Giriş başarılı!", bg_color=self.app.theme_cls.primary_color)
                 # Başarılı girişten sonra ana menüye yönlendirme
                 # self.app.back_to_menu()

@@ -11,7 +11,7 @@ from components.SnackBar import SnackBar
 import requests
 import threading
 
-
+from config import config_reader
 
 
 SignUp_Kv ='''
@@ -122,7 +122,7 @@ class SignUpScreen(MDScreen):
 
 class SignUp:
     def __init__(self):
-        self._url = "127.0.0.1"  # Varsayılan olarak localhost
+        self._url = config_reader.get_config_value('route')#"127.0.0.1"  # Varsayılan olarak localhost
         self.app = MDApp.get_running_app()
         self.root = None
         self.settings_dialog = None

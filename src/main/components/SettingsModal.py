@@ -1,4 +1,5 @@
 class Dialog:
+
     def show_settings_dialog(self):
         """Ayarlar dialogunu gösterir"""
         from kivymd.uix.dialog import MDDialog
@@ -7,6 +8,7 @@ class Dialog:
         from kivymd.uix.button import MDRaisedButton
         
         if not self.settings_dialog:
+            
             self.settings_field = MDTextField(
                 hint_text="Sunucu IP adresi",
                 text=self._url,
