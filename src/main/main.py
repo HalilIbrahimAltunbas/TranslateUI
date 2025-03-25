@@ -10,17 +10,22 @@ from kivy.properties import StringProperty, ObjectProperty
 from kivymd.uix.button import MDIconButton
 from kivymd.uix.behaviors import RectangularRippleBehavior
 from kivymd.uix.behaviors.elevation import CommonElevationBehavior
+from kivymd.uix.menu import MDDropdownMenu
+from kivymd.uix.toolbar.toolbar import MDTopAppBar
 
 # SpeechApp için import (kodunuzu içe aktarıyoruz)
 from SpeechRecognation.Speech_Page import SpeechApp
 from OCR.OCR_Page import OCRApp
 from Text.Text_Page import TranslateApp
-from Registiration.SignUp import SignUp  
-from Registiration.SignIn import SignIn 
-from Registiration.Password import Password 
+from QuizPage.QuizPage import WordGameApp
+from Registiration.SignUp import SignUp
+from Registiration.SignIn import SignIn
+from Registiration.Password import Password
+from Registiration.AuthClient import auth_client
 # Ana ekran ve butonlar için KV dili tanımı
 KV = '''
 <MenuButton>:
+   
     orientation: "horizontal"
     adaptive_height: True
     spacing: "12dp"
@@ -29,43 +34,50 @@ KV = '''
     elevation: 2
     md_bg_color: app.theme_cls.bg_light
     ripple_behavior: True
-    
+
     MDBoxLayout:
+        id:BoxLayout1
         adaptive_width: True
         padding: ["0dp", "0dp", "12dp", "0dp"]
-        
+
         MDIconButton:
+            id:IconButtoninBoxLayout1
             icon: root.icon
             theme_icon_color: "Custom"
             icon_color: app.theme_cls.primary_color
-    
+
     MDBoxLayout:
+        id:BoxLayout2
         orientation: "vertical"
         adaptive_height: True
         spacing: "4dp"
-        
+
         MDLabel:
+            id:LabelinBoxLayout2
             text: root.text
             font_style: "H6"
             adaptive_height: True
-            
+
         MDLabel:
+            id:Label2inBoxLayout2
             text: root.description
             font_style: "Caption"
             theme_text_color: "Secondary"
             adaptive_height: True
-    
+
     Widget:
 MDScreen:
     name:'MainScreen'
     MDBoxLayout:
         orientation: "vertical"
         MDTopAppBar:
-            title: "Uygulama Menüsü"
+            id:topbar
+            title: app.lang_conv.get_value('app_menu')
             elevation: 4
-            right_action_items: [["dots-vertical", lambda x: app.show_about()]]
+            right_action_items: [["dots-vertical", lambda x: app.show_about()],["logout", lambda x: app.log_out()],["translate-variant" ,lambda x: app.menu_open(x)],["theme-light-dark" ,lambda x: app.active_Dark_Theme()]]
+
+
         ScrollView:
-            do_scroll_x: False
             do_scroll_y: True
             MDList:
                 id: menu_list
@@ -75,16 +87,41 @@ MDScreen:
 
 class MenuButton(MDCard, RectangularRippleBehavior, CommonElevationBehavior):
     """Özel oluşturulmuş menü butonu sınıfı."""
+    id = StringProperty("Id")
     icon = StringProperty("android")
     text = StringProperty("Uygulama")
     description = StringProperty("Uygulama açıklaması")
     screen_cls = ObjectProperty(None)
     screen_name = StringProperty("")
+
+        
+    
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.bind(on_touch_up=self._on_touch_up)
+    
+    def _on_touch_up(self, instance, touch):
+        """Butona tıklama olayını işler."""
+        if instance.collide_point(*touch.pos) and not touch.is_mouse_scrolling:
+            if touch.is_double_tap or touch.is_triple_tap:
+                return False
+            if touch.button == 'left':
+                self.on_release()
+                return True
+        return False
+
     
     def on_release(self):
         """Butona tıklandığında çağrılır ve ilgili ekranı yükler."""
         app = MDApp.get_running_app()
         app.load_screen(self.screen_cls, self.screen_name)
+
+
+        
+
+    
+
+import i18n
 
 class MainApp(MDApp):
     def __init__(self, **kwargs):
@@ -94,29 +131,68 @@ class MainApp(MDApp):
         self.menu_items = []
         self.current_screen = None
         self.about_dialog = None
+        self.lang = 'EN'
+        self.lang_conv = i18n.lang
         
+
+
+
     def build(self):
         """Ana uygulamayı oluşturur."""
+        self.Dark_theme_active = 0
         self.theme_cls.primary_palette = "Indigo"
         self.theme_cls.accent_palette = "Amber"
         self.theme_cls.theme_style = "Light"
-        
+
+        # self.theme_cls.primary_color = "Blue"
+        # self.theme_cls.error_color = "Red"
+
         # Ekran yöneticisi oluştur
         self.screen_manager = MDScreenManager()
         self.sign_in_screen()
         # Ana ekranı oluştur
         # main_screen = Builder.load_string(KV)
         # self.screen_manager.add_widget(main_screen)
-        
+
         # Menü öğelerini ekle
         # self.setup_menu_items()
         # self.populate_menu()
         
-        
+
         return self.screen_manager
     
+    def active_Dark_Theme(self):
+        #  auth_client.is_token_valid()
+        self.Dark_theme_active = not self.Dark_theme_active
+        self.theme_cls.theme_style = ("Dark" if self.Dark_theme_active else "Light")
+
     def sign_in_screen(self):
         self.load_screen(SignIn,'sign_in_screen')
+
+    def menu_open(self,a):
+        menu_options = [
+            {
+                "text": "TR",
+                "on_release": lambda x ="tr": self.menu_callback(x),
+            },
+            {
+                "text": "EN",
+                "on_release": lambda x="en": self.menu_callback(x),
+            }
+        ]
+
+        MDDropdownMenu(
+            caller= a, items=menu_options
+        ).open()
+
+    def menu_callback(self, text_item:str):
+        if text_item.lower() == self.lang.lower():
+            return
+        self.lang = text_item
+        self.lang_conv.set_lang(text_item)
+        self.load_menu()
+
+
 
     def load_menu(self):
         # Ana ekranı oluştur
@@ -132,45 +208,52 @@ class MainApp(MDApp):
     def setup_menu_items(self):
         """Menü öğelerini yapılandırır."""
         # Menü öğesi eklemek için burayı kullanabilirsiniz
+        self.menu_items.clear()
 
-        
-        
         self.add_menu_item(
-            icon="microphone", 
-            text="Ses Tanıma", 
-            description="Konuşmayı metne çevirme uygulaması",
+            icon="microphone",
+            text=self.lang_conv.get_value('speech_recognition'),#"Ses Tanıma",
+            description=self.lang_conv.get_value('speech_recognition_desc'),
             screen_cls=SpeechApp,
             screen_name="speech_app"
         )
-        
-        # OCR Uygulaması örneği (gerçek uygulamanız ile değiştirin)
+
+        # OCR Uygulaması örneği
         self.add_menu_item(
-            icon="text-recognition", 
-            text="OCR Aracı", 
-            description="Görselden metin tanıma uygulaması",
-            screen_cls=OCRApp,  # Gerçek OCR uygulamanızı buraya ekleyin
+            icon="text-recognition",
+            text=self.lang_conv.get_value('ocr_tool'),
+            description=self.lang_conv.get_value('ocr_tool_desc'),
+            screen_cls=OCRApp,  
             screen_name="ocr_app"
         )
-        
-        # Daha fazla uygulama ekleyebilirsiniz
+
         self.add_menu_item(
-            icon="translate", 
-            text="Çeviri Aracı", 
-            description="Metni farklı dillere çevirme uygulaması",
-            screen_cls=TranslateApp,  # Gerçek çeviri uygulamanızı buraya ekleyin
+            icon="translate",
+            text=self.lang_conv.get_value('translation_tool'),
+            description=self.lang_conv.get_value('translation_tool_desc'),
+            screen_cls=TranslateApp,  
             screen_name="translate_app"
         )
-        
+
         self.add_menu_item(
-            icon="text-to-speech", 
-            text="Metin Okuma", 
-            description="Metni sesli okuma uygulaması",
-            screen_cls=None,  # Gerçek TTS uygulamanızı buraya ekleyin
+            icon="",
+            text=self.lang_conv.get_value('text_to_speech'),
+            description=self.lang_conv.get_value('text_to_speech_desc'),
+            screen_cls=WordGameApp,  
             screen_name="tts_app"
         )
-    
+
+        self.add_menu_item(
+            icon="text-to-speech",
+            text=self.lang_conv.get_value('text_to_speech'),
+            description=self.lang_conv.get_value('text_to_speech_desc'),
+            screen_cls=None,  
+            screen_name="tts_app"
+        )
+
     def add_menu_item(self, icon, text, description, screen_cls, screen_name):
         """Menüye yeni bir öğe ekler."""
+
         self.menu_items.append({
             "icon": icon,
             "text": text,
@@ -178,25 +261,41 @@ class MainApp(MDApp):
             "screen_cls": screen_cls,
             "screen_name": screen_name
         })
-    
+
     def populate_menu(self):
         """Menü listesini öğelerle doldurur."""
         menu_list = self.screen_manager.get_screen("MainScreen").ids.menu_list
+        i = 0
         
         for item in self.menu_items:
             button = MenuButton(
+                id= f"button_{i}",
                 icon=item["icon"],
                 text=item["text"],
                 description=item["description"],
                 screen_cls=item["screen_cls"],
                 screen_name=item["screen_name"]
             )
-            
-            # Bütona tıklama olayını bağla
-            button.bind(on_touch_up=self.on_button_touch)
-            
+            i += 1
+
+            ### find a solution for this
+            '''
+            denote for me: MenuButton object take 3 widgets every new instance,
+            our need is just 3 widget 
+            '''
+            if len(button.children) > 3:
+                for i in range(3,len(button.children)):
+                    
+                    button.remove_widget(button.children[3])
+            # Butona tıklama olayını bağla
+            # button.bind(on_touch_up=self.on_button_touch)
+
             # Butonu listeye ekle
             menu_list.add_widget(button)
+            
+            # print(menu_list.children[0]._proxy_ref.__dir__())
+            
+            
     
     def on_button_touch(self, instance, touch):
         """Butona tıklama olayını işler."""
@@ -213,18 +312,18 @@ class MainApp(MDApp):
         if screen_cls is None:
             # Uygulama henüz uygulanmamışsa bildir
             from kivymd.uix.snackbar import Snackbar
-            Snackbar(text=f"{screen_name} henüz uygulanmadı").open()
+            Snackbar(text=f"{screen_name} {self.lang_conv.get_value('not_implemented')}").open()
             return
         
         # Eğer ekran zaten oluşturulmuşsa, ona geç
         if self.screen_manager.has_screen(screen_name):
             self.screen_manager.current = screen_name
             return
-            
+
         try:
             # Yeni bir ekran örneği oluştur
             screen_instance = screen_cls().build()
-            
+
             # Eğer bir MDScreen döndürülmediyse, onu bir MDScreen içine yerleştir
             if not isinstance(screen_instance, MDScreen):
                 container = MDScreen(name=screen_name)
@@ -232,33 +331,33 @@ class MainApp(MDApp):
                 screen_instance = container
             else:
                 screen_instance.name = screen_name
-                
+
             # Ekranı ekran yöneticisine ekle
             self.screen_manager.add_widget(screen_instance)
-            
+
             # Ekrana geç
             self.screen_manager.current = screen_name
-            
+
             # Mevcut ekranı kaydet (ana menüye dönmek için)
             self.current_screen = screen_name
-            
+
         except Exception as e:
             from components.SnackBar import SnackBar
             SnackBar.callSnackBar(text=f"Hata: {e}",bg_color=self.theme_cls.primary_color)
             # Snackbar(text=f"Hata: {e}").open()
-    
+
     def show_about(self):
         """Uygulama hakkında bilgi gösterir."""
         from kivymd.uix.dialog import MDDialog
         from kivymd.uix.button import MDFlatButton
-        
+
         if not self.about_dialog:
             self.about_dialog = MDDialog(
-                title="Hakkında",
+                title=self.lang_conv.get_value('about'),
                 text="Modüler Uygulama Menüsü v1.0\n\nBu uygulama, farklı işlevler için tek bir arayüz sağlar.",
                 buttons=[
                     MDFlatButton(
-                        text="KAPAT",
+                        text=self.lang_conv.get_value('close'),
                         theme_text_color="Custom",
                         text_color=self.theme_cls.primary_color,
                         on_release=lambda x: self.about_dialog.dismiss()
@@ -266,10 +365,14 @@ class MainApp(MDApp):
                 ],
             )
         self.about_dialog.open()
-    
+
     def back_to_menu(self):
-        """Ana menüye geri döner."""
+        """Go back to Main Menu"""
         self.screen_manager.current = "MainScreen"
+
+    def log_out(self):
+        auth_client.logout()
+        self.sign_in_screen()
 
 # Ana ekrana isim ver
 

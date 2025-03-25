@@ -7,10 +7,17 @@ from kivymd.uix.textfield import MDTextField
 from kivymd.uix.label import MDLabel
 from kivymd.uix.boxlayout import MDBoxLayout
 from kivymd.uix.dialog import MDDialog
+import requests.auth
+import requests.help
 # from kivymd.uix.snackbar import Snackbar
 # from kivymd.uix.snackbar.snackbar import MDSnackbar,MDLabel 
 from components.SnackBar import SnackBar
 import requests
+from Registiration import AuthClient
+
+from Service import HttpService 
+
+from config import config_reader
 
 # Çeviri App KV
 TRANSLATE_KV = '''
@@ -66,9 +73,10 @@ MDScreen:
                     theme_text_color: "Secondary"
 '''
 
+
 class TranslateApp:
     def __init__(self):
-        self._url = "127.0.0.1"  # Varsayılan olarak localhost
+        self._url = config_reader.get_config_value('route')#"127.0.0.1"  # Varsayılan olarak localhost
         self.app = MDApp.get_running_app()
         self.root = None
         self.settings_dialog = None
@@ -80,7 +88,9 @@ class TranslateApp:
         self.app.translate_app = self
         
         return self.root
-        
+
+      
+
     def translate_text(self):
         """Metni çevirir"""
         try:
@@ -92,57 +102,27 @@ class TranslateApp:
                 
             # Burada gerçek API ile çeviri yapabilirsiniz
             # Örnek olarak, gerçek API'ye istek gönderme kodu:
-            # url = f"http://{self._url}:5000/translate-text"
-            # response = requests.post(url, json={"text": input_text})
-            # if response.ok:
-            #     translated_text = response.json().get('translated', 'Çeviri yapılamadı')
-            # else:
-            #     translated_text = f"Hata: {response.json().get('error', 'Bilinmeyen hata')}"
+            url = f"http://{self._url}:5000/translate-text"
+
+            response = HttpService.HttpService().post(url,{"json":{"text": input_text}})
+            # response = requests.post(url, headers = {"Authorization": f"Bearer {AuthClient.auth_client.get_token()}"}  ,json={"text": input_text})
+            
+            if response.ok:
+                translated_text = response.json().get('text', 'Çeviri yapılamadı')
+            else:
+                translated_text = f"Hata: {response.json().get('error', 'Bilinmeyen hata')}"
             
             # Şimdilik basit bir simülasyon
-            translated_text = f'"{input_text}" çevirildi!'
+            # translated_text = f'"{translated_text}" çevirildi!'
             
             self.root.ids.output_text.text = translated_text
             
         except Exception as e:
             self.root.ids.output_text.text = f"Çeviri hatası: {e}"
+
+    
             
     def show_settings_dialog(self):
-        """Ayarlar dialogunu gösterir"""
-        if not self.settings_dialog:
-            self.settings_field = MDTextField(
-                hint_text="Sunucu IP adresi",
-                text=self._url,
-                mode="rectangle",
-            )
-            
-            self.settings_dialog = MDDialog(
-                title="Ayarlar",
-                type="custom",
-                content_cls=MDBoxLayout(
-                    self.settings_field,
-                    orientation="vertical",
-                    spacing="12dp",
-                    size_hint_y=None,
-                    height="80dp",
-                    padding=["24dp", "0dp", "24dp", "0dp"]
-                ),
-                buttons=[
-                    MDRaisedButton(
-                        text="İPTAL",
-                        on_release=lambda x: self.settings_dialog.dismiss()
-                    ),
-                    MDRaisedButton(
-                        text="KAYDET",
-                        on_release=lambda x: self.save_settings()
-                    ),
-                ],
-            )
-        self.settings_dialog.open()
-    
-    def save_settings(self):
-        """Ayarları kaydeder"""
-        self._url = self.settings_field.text
-        self.settings_dialog.dismiss()
-        SnackBar.callSnackBar(text="Ayarlar kaydedildi",bg_color=self.app.theme_cls.primary_color)
+        from components.SettingsModal import Dialog
+        Dialog.show_settings_dialog(self)
        

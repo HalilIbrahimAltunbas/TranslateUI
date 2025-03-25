@@ -1,4 +1,3 @@
-# speech_app.py - Ana Menü ile kullanılması için önceki kodumuzu modül olarak ayarlıyoruz
 from kivymd.app import MDApp
 from kivymd.uix.screen import MDScreen
 from kivymd.uix.button import MDRaisedButton
@@ -17,10 +16,10 @@ import os
 import platform
 import tempfile
 
-# Platform kontrolü
+from config import config_reader
+
 IS_ANDROID = platform.system() == "Android" or os.path.exists("/sdcard")
 
-# Android için sınıflar sadece Android'de import edilecek
 if IS_ANDROID:
     from jnius import autoclass
     MediaRecorder = autoclass('android.media.MediaRecorder')
@@ -29,10 +28,9 @@ if IS_ANDROID:
     AudioEncoder = autoclass('android.media.MediaRecorder$AudioEncoder')
     file_path = join('/sdcard', 'DCIM')
 else:
-    # Windows için PyAudio kullanacağız
     import pyaudio
     import wave
-    file_path = tempfile.gettempdir()  # Geçici dosya dizini
+    file_path = tempfile.gettempdir()  
 
 # Speech App KV
 SPEECH_KV = '''
@@ -47,7 +45,7 @@ SPEECH_KV = '''
     
     MDLabel:
         id: status_label
-        text: "Butona basıp konuşabilirsiniz."
+        text: app.lang_conv.get_value('speech_instruction')
         halign: "center"
         theme_text_color: "Primary"
         font_style: "Subtitle1"
@@ -74,13 +72,13 @@ SPEECH_KV = '''
         
         MDRaisedButton:
             id: start_button
-            text: "Konuşmayı Başlat"
+            text: app.lang_conv.get_value('speech_start_recording')
             on_release: app.speech_app.start_recording()
             md_bg_color: app.theme_cls.primary_color
             
         MDRaisedButton:
             id: stop_button
-            text: "Durdur"
+            text: app.lang_conv.get_value('speech_stop_recording')
             disabled: True
             on_release: app.speech_app.stop_recording()
             md_bg_color: app.theme_cls.accent_color
@@ -94,7 +92,7 @@ MDScreen:
         spacing: "12dp"
         
         MDTopAppBar:
-            title: "Ses Tanıma Uygulaması"
+            title: app.lang_conv.get_value('speech_recognition_app')
             left_action_items: [["arrow-left", lambda x: app.back_to_menu()]]
             right_action_items: [["cog", lambda x: app.speech_app.show_settings_dialog()]]
             elevation: 4
@@ -110,14 +108,14 @@ class RecordCard(MDCard, CommonElevationBehavior):
 
 class SpeechApp:
     def __init__(self):
-        self._url = "127.0.0.1"  # Varsayılan olarak localhost
+        self._url = config_reader.get_config_value('route')#"127.0.0.1" default localhost
         self.recording = False
         self.recorder = None
         self.settings_dialog = None
         self.app = MDApp.get_running_app()
         self.root = None
         
-        # Windows için ses kaydetme değişkenleri
+      
         if not IS_ANDROID:
             self.frames = []
             self.audio = None
@@ -129,15 +127,17 @@ class SpeechApp:
             self.output_filename = join(file_path, "test.wav")
 
     def build(self):
-        self.root = Builder.load_string(SPEECH_KV)
-        # Ana uygulamada kullanılabilmek için kendimize bir referans koy
-        self.app.speech_app = self
-        return self.root
+        try:
+            self.root = Builder.load_string(SPEECH_KV)
+            self.app.speech_app = self
+            return self.root
+        except Exception as e:
+            print(e)
     
     def start_recording(self):
         try:
             if IS_ANDROID:
-                # Android için kayıt işlemi
+                # Record for Android
                 self.recorder = MediaRecorder()
                 self.recorder.setAudioSource(AudioSource.MIC)
                 self.recorder.setOutputFormat(OutputFormat.THREE_GPP)
@@ -147,7 +147,7 @@ class SpeechApp:
                 self.recorder.prepare()
                 self.recorder.start()
             else:
-                # Windows için kayıt işlemi
+                # Record for Windows
                 self.frames = []
                 self.audio = pyaudio.PyAudio()
                 self.stream = self.audio.open(format=self.FORMAT,
@@ -156,27 +156,26 @@ class SpeechApp:
                                               input=True,
                                               frames_per_buffer=self.CHUNK)
                 
-                # Ses kaydı için ayrı bir thread başlat
+                # initiation a new thread for voice record process
                 self.recording = True
                 threading.Thread(target=self._record_windows).start()
             
-            self.root.ids.record_card.ids.status_label.text = "Dinleniyor..."
+            self.root.ids.record_card.ids.status_label.text = self.app.lang_conv.get_value('speech_listening')
             self.root.ids.record_card.ids.status_label.theme_text_color = "Primary"
             self.root.ids.record_card.ids.start_button.disabled = True
             self.root.ids.record_card.ids.stop_button.disabled = False
             
         except Exception as e:
-            self.root.ids.record_card.ids.error_label.text = f"Hata: {e}"
+            self.root.ids.record_card.ids.error_label.text = f"Error: {e}"
     
     def _record_windows(self):
-        """Windows için ses kayıt işlemi."""
         try:
             while self.recording:
                 data = self.stream.read(self.CHUNK)
                 self.frames.append(data)
         except Exception as e:
             def update_error(dt):
-                self.root.ids.record_card.ids.error_label.text = f"Kayıt hatası: {e}"
+                self.root.ids.record_card.ids.error_label.text = f"{self.app.lang_conv.get_value('record_error')}: {e}"
             from kivy.clock import Clock
             Clock.schedule_once(update_error, 0)
             
@@ -189,14 +188,12 @@ class SpeechApp:
                     self.recorder = None
                 file_to_upload = join(file_path, "test.3gp")
             else:
-                # Windows kayıt durdurma
                 self.recording = False
                 if self.stream:
                     self.stream.stop_stream()
                     self.stream.close()
                 
                 if self.audio:
-                    # Kaydedilen sesi dosyaya yaz
                     wf = wave.open(self.output_filename, 'wb')
                     wf.setnchannels(self.CHANNELS)
                     wf.setsampwidth(self.audio.get_sample_size(self.FORMAT))
@@ -207,14 +204,13 @@ class SpeechApp:
                 
                 file_to_upload = self.output_filename
                 
-            self.root.ids.record_card.ids.status_label.text = "Kaydedilen ses işleniyor..."
+            self.root.ids.record_card.ids.status_label.text =self.app.lang_conv.get_value('speech_processing')
             self.root.ids.record_card.ids.stop_button.disabled = True
             
-            # Ses dosyasını sunucuya yükle
             threading.Thread(target=self.upload_voice, args=(file_to_upload,)).start()
             
         except Exception as e:
-            self.root.ids.record_card.ids.error_label.text = f"Kayıt durdurma hatası: {e}"
+            self.root.ids.record_card.ids.error_label.text = f"{self.app.lang_conv.get_value('stop_recording_error')}: {e}"
 
     def upload_voice(self, file_path_to_upload=None):
         try:
@@ -224,9 +220,9 @@ class SpeechApp:
             url = f"http://{self._url}:5000/detect-text-from-voice"
             response = self.get(url, file_path_to_upload)
             
-            # UI güncellemelerini ana thread'de yap
+            
             def update_ui(dt):
-                self.root.ids.record_card.ids.status_label.text = f"Algılanan Metin: {response}"
+                self.root.ids.record_card.ids.status_label.text = f"{self.app.lang_conv.get_value('speech_detected_text')}: {response}"
                 self.root.ids.record_card.ids.start_button.disabled = False
                 
             from kivy.clock import Clock
@@ -235,7 +231,7 @@ class SpeechApp:
             
         except Exception as e:
             def update_error(dt):
-                self.root.ids.record_card.ids.error_label.text = f"Yükleme hatası: {e}"
+                self.root.ids.record_card.ids.error_label.text = f"{self.app.lang_conv.get_value('download_error')}: {e}"
                 self.root.ids.record_card.ids.start_button.disabled = False
                 
             from kivy.clock import Clock
@@ -247,54 +243,14 @@ class SpeechApp:
                 response = requests.post(url, files={'file': file})
                 
             if response.ok:
-                return response.json().get('text', 'Metin algılanamadı')
+                return response.json().get('text', self.app.lang_conv.get_value('no_text_detected'))
             else:
-                return f"Hata: {response.json().get('error', 'Bilinmeyen hata')}"
+                return f"Error: {response.json().get('error', self.app.lang_conv.get_value('unknown_error'))}"
                 
         except Exception as e:
-            return f"İstek hatası: {e}"
+            return f"{self.app.lang_conv.get_value('download_error')}: {e}"
 
     def show_settings_dialog(self):
-        if not self.settings_dialog:
-            self.settings_field = MDTextField(
-                hint_text="Sunucu IP adresi",
-                text=self._url,
-                mode="rectangle",
-            )
-            
-            self.settings_dialog = MDDialog(
-                title="Ayarlar",
-                type="custom",
-                content_cls=MDBoxLayout(
-                    self.settings_field,
-                    orientation="vertical",
-                    spacing="12dp",
-                    size_hint_y=None,
-                    height="80dp",
-                    padding=["24dp", "0dp", "24dp", "0dp"]
-                ),
-                buttons=[
-                    MDRaisedButton(
-                        text="İPTAL",
-                        on_release=lambda x: self.settings_dialog.dismiss()
-                    ),
-                    MDRaisedButton(
-                        text="KAYDET",
-                        on_release=lambda x: self.save_settings()
-                    ),
-                ],
-            )
-        self.settings_dialog.open()
-    
-    def save_settings(self): 
-        from components.SnackBar import SnackBar
-        self._url = self.settings_field.text
-        self.settings_dialog.dismiss()
-        SnackBar.callSnackBar(text="Ayarlar kaydedildi",bg_color=self.app.theme_cls.primary_color)
-        # Snackbar(
-        #     text="Ayarlar kaydedildi",
-        #     snackbar_x="10dp",
-        #     snackbar_y="10dp",
-        #     size_hint_x=0.7,
-        #     bg_color=self.app.theme_cls.primary_color,
-        # ).open()
+        from components.SettingsModal import Dialog
+        Dialog.show_settings_dialog(self)
+       

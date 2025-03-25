@@ -68,13 +68,16 @@ else:
                 self.client_secrets_file,
                 scopes=['https://www.googleapis.com/auth/userinfo.email', 
                         'https://www.googleapis.com/auth/userinfo.profile'],
-                redirect_uri='http://localhost:8080'
+                redirect_uri='http://127.0.0.1:5000/register/auth/google'
             )
             
         def sign_in(self, callback):
+            
             flow = self.create_flow()
+            print(flow)
             auth_url, _ = flow.authorization_url(prompt='select_account')
             
+            print(auth_url)
             # Open browser for authentication
             webbrowser.open(auth_url)
             
@@ -83,6 +86,7 @@ else:
             
 # Example usage in your app
 def process_google_signin(id_token, user_info):
+    print('2')
     # Validate token with your backend
     # authenticate user or create account
     pass
@@ -92,10 +96,10 @@ def google_signin(self):
     """Google ile giriş işlemini gerçekleştirir"""
     try:
         if IS_ANDROID:
-            helper = GoogleAuthHelper("your-web-client-id.apps.googleusercontent.com")
+            helper = GoogleAuthHelper("974074287339-d1dou49kvo0c6bvf1rt4mi6ldm79iemg.apps.googleusercontent.com")
         else:
-            helper = GoogleAuthHelper("client_secrets.json")
-            
+            helper = GoogleAuthHelper("client_secret_974074287339-qnkoltb0dhorldc2iherkq7l100m8gfl.apps.googleusercontent.com.json")
+        
         helper.sign_in(lambda token, user: process_google_signin(token, user))
         SnackBar.callSnackBar(text="Google ile giriş işlemi başlatılıyor...", bg_color=self.app.theme_cls.primary_color)
     except Exception as e:
