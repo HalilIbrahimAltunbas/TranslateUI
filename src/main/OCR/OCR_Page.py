@@ -1,16 +1,14 @@
-# OCR_Page.py - OCR Modülü, Ana Menü ile kullanılmak üzere düzenlenmiş
 from io import BytesIO
 from kivy.lang import Builder
 from kivy.core.window import Window
-from kivymd.app import MDApp
-from kivy.graphics.texture import Texture
+from kivymd.app import MDApp  
 from kivymd.uix.button import MDRaisedButton
 from kivymd.uix.boxlayout import MDBoxLayout
 from kivymd.uix.label import MDLabel
 from kivymd.uix.card import MDCard
-# from kivymd.uix.fitimage import FitImage
 from kivy.uix.camera import Camera
 from kivy.uix.relativelayout import RelativeLayout
+from kivy.graphics.context_instructions import Rotate
 from PIL import Image
 import requests
 from os.path import join
@@ -20,44 +18,39 @@ import os
 import platform
 import tempfile
 from config import config_reader
+from Service.HttpService import httpservice
+from Registiration import AuthClient
 
-# Platform kontrolü
 IS_ANDROID = platform.system() == "Android" or os.path.exists("/sdcard")
 
-# Dosya yolu ayarlaması
 if IS_ANDROID:
     DCIM = join('/sdcard', 'DCIM')
 else:
-    DCIM = tempfile.gettempdir()  # Geçici dizin
+    DCIM = tempfile.gettempdir()  
 
-# OCR App KV
 OCR_KV = """
 MDScreen:
     name: "ocr_app"
-    
+
     MDBoxLayout:
         orientation: "vertical"
         
         MDTopAppBar:
-            title: "OCR Uygulaması"
-            left_action_items: [["arrow-left", lambda x: app.back_to_menu()]]
+            title: app.lang_conv.get_value('ocr_app')
+            left_action_items: [["arrow-left", lambda x: app.ocr_app.back_to_menu()]]
             right_action_items: [["cog", lambda x: app.ocr_app.show_settings_dialog()]]
             elevation: 4
-        
+
+        RelativeLayout:
+            id: camera_layout
+            # position_hint: (.5,.5)
+            # size_hint: (1,None)
+
         MDBoxLayout:
             id: content_layout
             orientation: "vertical"
             padding: "16dp"
             spacing: "12dp"
-            
-            RelativeLayout:
-                id: camera_layout
-                size_hint_y: 1
-            
-            # RelativeLayout:
-            #     id: image_layout
-            #     size_hint_y: 0.5
-            #     opacity: 0  # Başlangıçta gizli
             
             MDBoxLayout:
                 adaptive_height: True
@@ -91,14 +84,28 @@ MDScreen:
                 
                 MDLabel:
                     id: result_label
-                    text: "Algılanan metin burada görünecek."
+                    text: app.lang_conv.get_value('ocr_detected_text')
                     halign: "center"
                     theme_text_color: "Secondary"
 """
 
+class RotatedCamera(Camera):
+    """Extends the Camera class to handle rotation for Android devices"""
+    def __init__(self, **kwargs):
+        super(RotatedCamera, self).__init__(**kwargs)
+        # Set rotation for Android - will be applied to the texture
+        self.rotation = 90 if IS_ANDROID else 0
+        
+    def _camera_loaded(self, *largs):
+        super(RotatedCamera, self)._camera_loaded(*largs)
+        # Apply rotation to the texture on Android
+        if IS_ANDROID and self._camera:
+            self.texture = self._camera.texture
+            self.texture_size = self.texture.size
+
 class OCRApp:
     def __init__(self):
-        self._url = config_reader.get_config_value('route')# "127.0.0.1"  # Varsayılan olarak localhost
+        self._url = config_reader.get_config_value('route')
         self.app = MDApp.get_running_app()
         self.root = None
         self.camera = None
@@ -106,110 +113,116 @@ class OCRApp:
         self.captured_image_data = None
         self.settings_dialog = None
         
+    def back_to_menu(self):
+        self.deactivate_camera()
+        if self.camera:
+            self.camera.on_play(self.camera, False)
+        self.app.back_to_menu()
         
     def build(self):
         self.root = Builder.load_string(OCR_KV)
         
-        # Ana uygulamada kullanılabilmek için kendimize bir referans koy
+        #Reference into main app
         self.app.ocr_app = self
         
-        # Kamera bileşeni ekleyelim
-        self.camera = Camera(play=True,resolution=(-1,-1),allow_stretch=True)
+        # Use RotatedCamera instead of Camera
+        self.camera = Camera(play=True, resolution=(-1,-1), allow_stretch=True)
+        if IS_ANDROID:
+        # Texture'ı döndür
+            
+            self.camera.canvas.before.add(Rotate(angle=270, axis=(0, 0, 1),  origin=self.camera.center))
+            self.camera.pos[0] -= 300
+            self.camera.pos[1] += 30
         self.root.ids.camera_layout.add_widget(self.camera)
         
         return self.root
         
     def capture_image(self):
-        """Kameradan fotoğraf çeker ve gösterir"""
         try:
-            # Kamera görüntüsünü al
             texture = self.camera.texture
             image_data = texture.pixels
             image_size = (texture.width, texture.height)
             
-            # Görüntüyü PIL Image'a dönüştür
+            # For rotated camera on Android, we may need to process the image differently
             canvas_img = Image.frombytes(mode='RGBA', size=image_size, data=image_data)
+            
+            # Rotate the image if we're on Android
+            if IS_ANDROID:
+                canvas_img = canvas_img.rotate(-90, expand=True)
+                
             data = BytesIO()
             canvas_img.save(data, format='png')
             data.seek(0)
             
-            # Görüntüyü kaydet (upload için)
             self.captured_image_data = BytesIO(data.getvalue())
             
-            # Görüntüyü CoreImage'a dönüştür (gösterim için)
             data.seek(0)
             im = CoreImage(BytesIO(data.read()), ext='png')
             
-            # Kamera gizlenir, çekilen resim gösterilir
-            # self.root.ids.camera_layout.opacity = 0
-            # self.root.ids.image_layout.opacity = 1
-            
-            # Resmi UI'ye ekle
             self.image_widget = kivyImg()
             self.image_widget.texture = im.texture
 
-            # self.image_widget.fit_mode = "contain" 
-            
-            
-
             self.root.ids.camera_layout.clear_widgets()
             self.root.ids.camera_layout.add_widget(self.image_widget)
-            
-            
-            # Butonları güncelle
+        
             self.root.ids.send_button.disabled = False
             self.root.ids.cam_button.disabled = False
-            self.root.ids.capture_button.disabled =True
+            self.root.ids.capture_button.disabled = True
+
+            self.deactivate_camera()
             
         except Exception as e:
-            self.root.ids.result_label.text = f"Hata: {e}"
+            self.root.ids.result_label.text = f"{self.app.lang_conv.get_value('error')}: {e}"
             print(e)
+    
+    def deactivate_camera(self):
+        self.root.ids.send_button.disabled = False
+        self.root.ids.cam_button.disabled = False
+        self.root.ids.capture_button.disabled = True
+
+        if self.camera:
+            self.camera.play = False
             
     def upload_image(self):
-        """Resmi API'ye gönderir ve sonucu gösterir"""
         try:
             if not self.captured_image_data:
-                self.root.ids.result_label.text = "Hata: Görüntü bulunamadı!"
+                self.root.ids.result_label.text = f"{self.app.lang_conv.get_value('error')}: {self.app.lang_conv.get_value('no_image_detected')}"
                 return
                 
             url = f"http://{self._url}:5000/detect-text"
             
-            # API'ye istek gönder
             self.captured_image_data.seek(0)
             
             response = requests.post(
-                url, 
+                url,
+                headers = {"Authorization": f"Bearer {AuthClient.auth_client.get_token()}"},  
                 files={'image': ('image.png', self.captured_image_data, 'image/png')}
             )
             
             if response.ok:
-                detected_text = response.json().get('text', 'Metin algılanamadı')
-                self.root.ids.result_label.text = f"Algılanan Metin: {detected_text}"
+                detected_text = response.json().get('text', self.app.lang_conv.get_value('_ocr_detected_text'))
+                self.root.ids.result_label.text = f"{self.app.lang_conv.get_value('_ocr_detected_text')}: {detected_text}"
             else:
-                error_msg = response.json().get('error', 'Bilinmeyen hata')
-                self.root.ids.result_label.text = f"Hata: {error_msg}"
+                error_msg = response.json().get('error', self.app.lang_conv.get_value('unknown_error'))
+                self.root.ids.result_label.text = f"{self.app.lang_conv.get_value('error')}: {error_msg}"
                 
         except Exception as e:
-            self.root.ids.result_label.text = f"İstek hatası: {e}"
+            self.root.ids.result_label.text = f"{self.app.lang_conv.get_value('request_error')}: {e}"
             
     def activate_camera(self):
-        """Kamerayı yeniden açar ve resmi kaldırır"""
-        # self.root.ids.camera_layout.opacity = 1
-        # self.root.ids.image_layout.opacity = 0
-
+        """Activate camera and make passive Image """
         self.root.ids.camera_layout.clear_widgets()
         self.root.ids.camera_layout.add_widget(self.camera)
         
-        # Buttonu deaktif hale getir
+        # deactivate Image layout
         self.root.ids.send_button.disabled = True
         self.root.ids.cam_button.disabled = True
         self.root.ids.capture_button.disabled = False
 
-        # Kamerayı yeniden aktif hale getir
+        # makes activate Camera
         if self.camera:
             self.camera.play = True
             
     def show_settings_dialog(self):
         from components.SettingsModal import Dialog
         Dialog.show_settings_dialog(self)
-       

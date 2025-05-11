@@ -15,6 +15,7 @@ from kivymd.uix.snackbar import Snackbar
 import os
 import platform
 import tempfile
+from Registiration import AuthClient
 
 from config import config_reader
 
@@ -30,7 +31,7 @@ if IS_ANDROID:
 else:
     import pyaudio
     import wave
-    file_path = tempfile.gettempdir()  
+    file_path = tempfile.gettempdir()
 
 # Speech App KV
 SPEECH_KV = '''
@@ -42,7 +43,7 @@ SPEECH_KV = '''
     pos_hint: {"center_x": .5, "center_y": .5}
     elevation: 4
     radius: [12]
-    
+
     MDLabel:
         id: status_label
         text: app.lang_conv.get_value('speech_instruction')
@@ -51,7 +52,7 @@ SPEECH_KV = '''
         font_style: "Subtitle1"
         size_hint_y: None
         height: self.texture_size[1]
-        
+
     MDLabel:
         id: error_label
         text: ""
@@ -69,13 +70,13 @@ SPEECH_KV = '''
         size_hint_y: None
         height: "48dp"
         pos_hint: {"center_x": .5}
-        
+
         MDRaisedButton:
             id: start_button
             text: app.lang_conv.get_value('speech_start_recording')
             on_release: app.speech_app.start_recording()
             md_bg_color: app.theme_cls.primary_color
-            
+
         MDRaisedButton:
             id: stop_button
             text: app.lang_conv.get_value('speech_stop_recording')
@@ -85,25 +86,25 @@ SPEECH_KV = '''
 
 MDScreen:
     name: "speech_app"
-    
+
     MDBoxLayout:
         orientation: "vertical"
         padding: "16dp"
         spacing: "12dp"
-        
+
         MDTopAppBar:
             title: app.lang_conv.get_value('speech_recognition_app')
             left_action_items: [["arrow-left", lambda x: app.back_to_menu()]]
             right_action_items: [["cog", lambda x: app.speech_app.show_settings_dialog()]]
             elevation: 4
-        
+
         RecordCard:
             id: record_card
-            
+
         Widget:
 '''
 
-class RecordCard(MDCard, CommonElevationBehavior):
+class RecordCard(MDCard, CommonElevationBehavior):    
     pass
 
 class SpeechApp:
@@ -114,8 +115,8 @@ class SpeechApp:
         self.settings_dialog = None
         self.app = MDApp.get_running_app()
         self.root = None
-        
-      
+
+
         if not IS_ANDROID:
             self.frames = []
             self.audio = None
@@ -128,12 +129,15 @@ class SpeechApp:
 
     def build(self):
         try:
-            self.root = Builder.load_string(SPEECH_KV)
+            
+                
+            self.root = Builder.load_string(SPEECH_KV) 
+            print(self.root.ids.record_card.children)
             self.app.speech_app = self
             return self.root
         except Exception as e:
             print(e)
-    
+
     def start_recording(self):
         try:
             if IS_ANDROID:
@@ -143,7 +147,7 @@ class SpeechApp:
                 self.recorder.setOutputFormat(OutputFormat.THREE_GPP)
                 self.recorder.setAudioEncoder(AudioEncoder.AMR_NB)
                 self.recorder.setOutputFile(join(file_path, "test.3gp"))
-                
+
                 self.recorder.prepare()
                 self.recorder.start()
             else:
@@ -155,19 +159,19 @@ class SpeechApp:
                                               rate=self.RATE,
                                               input=True,
                                               frames_per_buffer=self.CHUNK)
-                
+
                 # initiation a new thread for voice record process
                 self.recording = True
                 threading.Thread(target=self._record_windows).start()
-            
+
             self.root.ids.record_card.ids.status_label.text = self.app.lang_conv.get_value('speech_listening')
             self.root.ids.record_card.ids.status_label.theme_text_color = "Primary"
             self.root.ids.record_card.ids.start_button.disabled = True
             self.root.ids.record_card.ids.stop_button.disabled = False
-            
+
         except Exception as e:
             self.root.ids.record_card.ids.error_label.text = f"Error: {e}"
-    
+
     def _record_windows(self):
         try:
             while self.recording:
@@ -178,7 +182,7 @@ class SpeechApp:
                 self.root.ids.record_card.ids.error_label.text = f"{self.app.lang_conv.get_value('record_error')}: {e}"
             from kivy.clock import Clock
             Clock.schedule_once(update_error, 0)
-            
+
     def stop_recording(self):
         try:
             if IS_ANDROID:
@@ -192,7 +196,7 @@ class SpeechApp:
                 if self.stream:
                     self.stream.stop_stream()
                     self.stream.close()
-                
+
                 if self.audio:
                     wf = wave.open(self.output_filename, 'wb')
                     wf.setnchannels(self.CHANNELS)
@@ -201,14 +205,14 @@ class SpeechApp:
                     wf.writeframes(b''.join(self.frames))
                     wf.close()
                     self.audio.terminate()
-                
+
                 file_to_upload = self.output_filename
-                
+
             self.root.ids.record_card.ids.status_label.text =self.app.lang_conv.get_value('speech_processing')
             self.root.ids.record_card.ids.stop_button.disabled = True
-            
+
             threading.Thread(target=self.upload_voice, args=(file_to_upload,)).start()
-            
+
         except Exception as e:
             self.root.ids.record_card.ids.error_label.text = f"{self.app.lang_conv.get_value('stop_recording_error')}: {e}"
 
@@ -216,41 +220,40 @@ class SpeechApp:
         try:
             if not file_path_to_upload:
                 file_path_to_upload = join(file_path, "test.3gp" if IS_ANDROID else "test.wav")
-                
-            url = f"http://{self._url}:5000/detect-text-from-voice"
+
+            url = f"http://{self._url}:5000/voice"
             response = self.get(url, file_path_to_upload)
-            
-            
+
+
             def update_ui(dt):
                 self.root.ids.record_card.ids.status_label.text = f"{self.app.lang_conv.get_value('speech_detected_text')}: {response}"
                 self.root.ids.record_card.ids.start_button.disabled = False
-                
+
             from kivy.clock import Clock
             Clock.schedule_once(update_ui, 0)
             return response
-            
+
         except Exception as e:
             def update_error(dt):
                 self.root.ids.record_card.ids.error_label.text = f"{self.app.lang_conv.get_value('download_error')}: {e}"
                 self.root.ids.record_card.ids.start_button.disabled = False
-                
+
             from kivy.clock import Clock
             Clock.schedule_once(update_error, 0)
 
     def get(self, url, file_path1):
         try:
             with open(file_path1, 'rb') as file:
-                response = requests.post(url, files={'file': file})
-                
+                response = requests.post(url,  headers = {"Authorization": f"Bearer {AuthClient.auth_client.get_token()}"} ,files={'file': file})
+
             if response.ok:
                 return response.json().get('text', self.app.lang_conv.get_value('no_text_detected'))
             else:
                 return f"Error: {response.json().get('error', self.app.lang_conv.get_value('unknown_error'))}"
-                
+
         except Exception as e:
             return f"{self.app.lang_conv.get_value('download_error')}: {e}"
 
     def show_settings_dialog(self):
         from components.SettingsModal import Dialog
         Dialog.show_settings_dialog(self)
-       
