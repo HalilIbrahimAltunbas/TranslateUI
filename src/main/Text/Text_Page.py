@@ -28,7 +28,7 @@ MDScreen:
         orientation: "vertical"
         
         MDTopAppBar:
-            title: "Çeviri Uygulaması"
+            title: app.lang_conv.get_value('translation_app')
             left_action_items: [["arrow-left", lambda x: app.back_to_menu()]]
             right_action_items: [["cog", lambda x: app.translate_app.show_settings_dialog()]]
             elevation: 4
@@ -40,7 +40,7 @@ MDScreen:
 
             MDTextField:
                 id: input_text
-                hint_text: "Çevrilecek metni gir"
+                hint_text: app.lang_conv.get_value('translation_input_hint')
                 mode: "rectangle"
                 size_hint_x: 0.9
                 pos_hint: {"center_x": 0.5}
@@ -54,7 +54,7 @@ MDScreen:
                 pos_hint: {"center_x": 0.5}
                 
                 MDRaisedButton:
-                    text: "Çevir"
+                    text: app.lang_conv.get_value('translation_translate')
                     size_hint_x: 0.5
                     pos_hint: {"center_x": 0.5}
                     on_release: app.translate_app.translate_text()
@@ -68,7 +68,7 @@ MDScreen:
                 
                 MDLabel:
                     id: output_text
-                    text: "Çeviri sonucu burada görünecek"
+                    text: app.lang_conv.get_value('translation_result_placeholder')
                     halign: "center"
                     theme_text_color: "Secondary"
 '''
@@ -97,20 +97,20 @@ class TranslateApp:
             input_text = self.root.ids.input_text.text
             
             if not input_text.strip():
-                self.root.ids.output_text.text = "Lütfen çevrilecek metin girin."
+                self.root.ids.output_text.text = self.app.lang_conv.get_value('translation_empty_input')
                 return
                 
             # Burada gerçek API ile çeviri yapabilirsiniz
             # Örnek olarak, gerçek API'ye istek gönderme kodu:
             url = f"http://{self._url}:5000/translate-text"
 
-            response = HttpService.HttpService().post(url,{"json":{"text": input_text}})
-            # response = requests.post(url, headers = {"Authorization": f"Bearer {AuthClient.auth_client.get_token()}"}  ,json={"text": input_text})
+            # response = HttpService.HttpService().post(url,{"json":{"text": input_text}})
+            response = requests.post(url, headers = {"Authorization": f"Bearer {AuthClient.auth_client.get_token()}"}  ,json={"text": input_text})
             
             if response.ok:
-                translated_text = response.json().get('text', 'Çeviri yapılamadı')
+                translated_text = response.json().get('text', self.app.lang_conv.get_value('no_text_detected'))
             else:
-                translated_text = f"Hata: {response.json().get('error', 'Bilinmeyen hata')}"
+                translated_text = f"{self.app.lang_conv.get_value('error')}: {response.json().get('error', {self.app.lang_conv.get_value('unknown_error')})}"
             
             # Şimdilik basit bir simülasyon
             # translated_text = f'"{translated_text}" çevirildi!'
@@ -118,7 +118,7 @@ class TranslateApp:
             self.root.ids.output_text.text = translated_text
             
         except Exception as e:
-            self.root.ids.output_text.text = f"Çeviri hatası: {e}"
+            self.root.ids.output_text.text = f"{self.app.lang_conv.get_value('request_error')}: {e}"
 
     
             

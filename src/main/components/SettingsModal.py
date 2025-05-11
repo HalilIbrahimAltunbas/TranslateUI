@@ -10,13 +10,13 @@ class Dialog:
         if not self.settings_dialog:
             
             self.settings_field = MDTextField(
-                hint_text="Sunucu IP adresi",
+                hint_text= self.app.lang_conv.get_value('settings_server_ip'),
                 text=self._url,
                 mode="rectangle",
             )
             
             self.settings_dialog = MDDialog(
-                title="Ayarlar",
+                title=self.app.lang_conv.get_value('settings'),
                 type="custom",
                 content_cls=MDBoxLayout(
                     self.settings_field,
@@ -28,11 +28,11 @@ class Dialog:
                 ),
                 buttons=[
                     MDRaisedButton(
-                        text="İPTAL",
+                        text=self.app.lang_conv.get_value('settings_cancel'),
                         on_release=lambda x: self.settings_dialog.dismiss()
                     ),
                     MDRaisedButton(
-                        text="KAYDET",
+                        text=self.app.lang_conv.get_value('settings_save'),
                         on_release=lambda x: Dialog.save_settings(self)
                     ),
                 ],
@@ -44,5 +44,5 @@ class Dialog:
         from components.SnackBar import SnackBar 
         self._url = self.settings_field.text
         self.settings_dialog.dismiss()
-        SnackBar.callSnackBar(text="Ayarlar kaydedildi",bg_color=self.app.theme_cls.primary_color)
+        SnackBar.callSnackBar(text=self.app.lang_conv.get_value('settings_saved'),bg_color=self.app.theme_cls.primary_color)
         

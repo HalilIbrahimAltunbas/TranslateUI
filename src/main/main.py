@@ -18,10 +18,14 @@ from SpeechRecognation.Speech_Page import SpeechApp
 from OCR.OCR_Page import OCRApp
 from Text.Text_Page import TranslateApp
 from QuizPage.QuizPage import WordGameApp
+from Dictionary.Dictionary import DictionaryApp
 from Registiration.SignUp import SignUp
 from Registiration.SignIn import SignIn
 from Registiration.Password import Password
 from Registiration.AuthClient import auth_client
+from Chat.geminiUI import GeminiApp
+
+
 # Ana ekran ve butonlar için KV dili tanımı
 KV = '''
 <MenuButton>:
@@ -196,10 +200,15 @@ class MainApp(MDApp):
 
     def load_menu(self):
         # Ana ekranı oluştur
-        main_screen = Builder.load_string(KV)
-        self.screen_manager.clear_widgets()
-        self.screen_manager.add_widget(main_screen)
-        
+        if(not self.screen_manager.has_screen('MainScreen')):
+           
+            self.main_screen = Builder.load_string(KV)
+            self.screen_manager.clear_widgets()
+            self.screen_manager.add_widget(self.main_screen)
+#----------------28-4-25-SignIn bug fix-----------------------------------------------
+        else:
+            self.screen_manager.switch_to(self.main_screen)
+#----------------28-4-25-SignIn bug fix-----------------------------------------------
         
         # Menü öğelerini ekle
         self.setup_menu_items()
@@ -228,6 +237,14 @@ class MainApp(MDApp):
         )
 
         self.add_menu_item(
+            icon="chat",
+            text=self.lang_conv.get_value('chat_app'),
+            description=self.lang_conv.get_value('chat_page_desc'),
+            screen_cls=GeminiApp,  
+            screen_name="chat_page"
+        )
+
+        self.add_menu_item(
             icon="translate",
             text=self.lang_conv.get_value('translation_tool'),
             description=self.lang_conv.get_value('translation_tool_desc'),
@@ -236,20 +253,28 @@ class MainApp(MDApp):
         )
 
         self.add_menu_item(
-            icon="",
-            text=self.lang_conv.get_value('text_to_speech'),
-            description=self.lang_conv.get_value('text_to_speech_desc'),
-            screen_cls=WordGameApp,  
-            screen_name="tts_app"
+            icon="book-alphabet",
+            text=self.lang_conv.get_value('dictionary_app'),
+            description=self.lang_conv.get_value('dictionary_app_desc'),
+            screen_cls=DictionaryApp,  
+            screen_name="dict_app"
         )
 
         self.add_menu_item(
-            icon="text-to-speech",
-            text=self.lang_conv.get_value('text_to_speech'),
-            description=self.lang_conv.get_value('text_to_speech_desc'),
-            screen_cls=None,  
-            screen_name="tts_app"
+            icon="file-word-outline",
+            text=self.lang_conv.get_value('word_game'),
+            description=self.lang_conv.get_value('word_game_instruction'),
+            screen_cls=WordGameApp,  
+            screen_name="word_game"
         )
+
+        # self.add_menu_item(
+        #     icon="text-to-speech",
+        #     text=self.lang_conv.get_value('text_to_speech'),
+        #     description=self.lang_conv.get_value('text_to_speech_desc'),
+        #     screen_cls=None,  
+        #     screen_name="tts_app"
+        # )
 
     def add_menu_item(self, icon, text, description, screen_cls, screen_name):
         """Menüye yeni bir öğe ekler."""
@@ -265,6 +290,7 @@ class MainApp(MDApp):
     def populate_menu(self):
         """Menü listesini öğelerle doldurur."""
         menu_list = self.screen_manager.get_screen("MainScreen").ids.menu_list
+        menu_list.clear_widgets()
         i = 0
         
         for item in self.menu_items:
@@ -283,10 +309,11 @@ class MainApp(MDApp):
             denote for me: MenuButton object take 3 widgets every new instance,
             our need is just 3 widget 
             '''
-            if len(button.children) > 3:
-                for i in range(3,len(button.children)):
+            # if len(button.children) > 3:
+            #     for i in range(3,len(button.children)):
                     
-                    button.remove_widget(button.children[3])
+            #         button.remove_widget(button.children[3])
+
             # Butona tıklama olayını bağla
             # button.bind(on_touch_up=self.on_button_touch)
 
@@ -318,12 +345,16 @@ class MainApp(MDApp):
         # Eğer ekran zaten oluşturulmuşsa, ona geç
         if self.screen_manager.has_screen(screen_name):
             self.screen_manager.current = screen_name
+            print(f"{screen_name} has already registered")
             return
 
         try:
             # Yeni bir ekran örneği oluştur
-            screen_instance = screen_cls().build()
+            print(f"screen manager's children: {self.screen_manager._get_screen_names()}")
 
+            print(f"{screen_name} registering")
+            screen_instance = screen_cls().build()
+           
             # Eğer bir MDScreen döndürülmediyse, onu bir MDScreen içine yerleştir
             if not isinstance(screen_instance, MDScreen):
                 container = MDScreen(name=screen_name)
@@ -334,6 +365,8 @@ class MainApp(MDApp):
 
             # Ekranı ekran yöneticisine ekle
             self.screen_manager.add_widget(screen_instance)
+            print(f"screen manager's children: {self.screen_manager._get_screen_names()}")
+
 
             # Ekrana geç
             self.screen_manager.current = screen_name
@@ -343,7 +376,7 @@ class MainApp(MDApp):
 
         except Exception as e:
             from components.SnackBar import SnackBar
-            SnackBar.callSnackBar(text=f"Hata: {e}",bg_color=self.theme_cls.primary_color)
+            SnackBar.callSnackBar(text=f"Error: {e}",bg_color=self.theme_cls.primary_color)
             # Snackbar(text=f"Hata: {e}").open()
 
     def show_about(self):

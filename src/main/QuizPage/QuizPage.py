@@ -31,7 +31,7 @@ WORD_GAME_KV = '''
 
     MDLabel:
         id: question_label
-        text: "Oyun başlatılıyor..."
+        text: app.lang_conv.get_value('word_game_start')
         halign: "center"
         theme_text_color: "Primary"
         font_style: "H6"
@@ -40,7 +40,7 @@ WORD_GAME_KV = '''
 
     MDLabel:
         id: instruction_label
-        text: "Boşlukları doğru harflerle doldurun"
+        text: app.lang_conv.get_value('word_game_instruction')
         halign: "center"
         theme_text_color: "Secondary"
         font_style: "Caption"
@@ -61,6 +61,15 @@ WORD_GAME_KV = '''
     Widget:
         size_hint_y: 0.1
 
+    MDLabel:
+        id: hint_label
+        text: ""
+        halign: "center"
+        theme_text_color: "Secondary"
+        font_style: "Subtitle1"
+        size_hint_y: None
+        height: self.texture_size[1]
+    
     MDLabel:
         id: result_label
         text: ""
@@ -96,14 +105,14 @@ WORD_GAME_KV = '''
 
         MDRaisedButton:
             id: next_button
-            text: "Sonraki Soru"
+            text: app.lang_conv.get_value('word_game_next_question')
             disabled: True
             on_release: app.word_game.next_question()
             md_bg_color: app.theme_cls.primary_color
 
         MDRaisedButton:
             id: restart_button
-            text: "Yeniden Başlat"
+            text: app.lang_conv.get_value('word_game_restart')
             on_release: app.word_game.start_game()
             md_bg_color: app.theme_cls.accent_color
 
@@ -115,7 +124,7 @@ WORD_GAME_KV = '''
     font_size: "20sp"
     halign: "center"
     write_tab: False
-    background_color: 1, 1, 1, 1
+    background_color: .6, .6, .6, 1
     background_normal: ""
     foreground_color: 0, 0, 0, 1
     max_length: 1
@@ -129,7 +138,7 @@ MDScreen:
         spacing: "12dp"
 
         MDTopAppBar:
-            title: "Kelime Bilme Oyunu"
+            title: app.lang_conv.get_value('word_game')
             left_action_items: [["arrow-left", lambda x: app.back_to_menu()]]
             right_action_items: [["cog", lambda x: app.word_game.show_settings_dialog()]]
             elevation: 4
@@ -151,7 +160,7 @@ class LetterInput(TextInput):
         super(LetterInput, self).__init__(**kwargs)
 
     def keyboard_on_key_up(self, window, keycode):
-        print(self.app.word_game._url)
+        # print(self.app.word_game._url)
         if keycode[1] in 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ' and len(self.text) >= 1:
             self.text = keycode[1].upper()
             if self.next_input:
@@ -212,7 +221,7 @@ class WordGameApp:
         """Oyunu başlat, soruları API'den al"""
         self.score = 0
         self.question_index = 0
-        self.root.ids.game_card.ids.score_label.text = f"Puan: {self.score}"
+        self.root.ids.game_card.ids.score_label.text = f"{self.app.lang_conv.get_value('word_game_score')}: {self.score}"
         self.root.ids.game_card.ids.result_label.text = ""
 
         # Soruları API'den almak için ayrı bir thread başlat
@@ -228,11 +237,12 @@ class WordGameApp:
 
             if response.ok:
                 self.questions = response.json()
+                print(response.json())
                 # Ana thread'de UI'ı güncelle
                 Clock.schedule_once(lambda dt: self.load_question(), 0)
             else:
                 # Hata durumunda UI'ı güncelle
-                Clock.schedule_once(lambda dt: self.update_error(f"Sorular alınamadı: {response.json().get('error', 'Bilinmeyen hata')}"), 0)
+                Clock.schedule_once(lambda dt: self.update_error(f"Sorular alınamadı: {response.json().get('error', {self.app.lang_conv.get_value('unknown_error')})}"), 0)
 
         except Exception as e:
             print(e)
@@ -248,7 +258,7 @@ class WordGameApp:
 
     def update_error(self, error_message):
         """Hata mesajını göster"""
-        self.root.ids.game_card.ids.question_label.text = "Hata!"
+        self.root.ids.game_card.ids.question_label.text = self.app.lang_conv.get_value('error')
         self.root.ids.game_card.ids.instruction_label.text = error_message
 
     def load_question(self):
@@ -265,6 +275,8 @@ class WordGameApp:
             # Soru formatına göre harf kutucukları oluştur
             word = self.current_question["soru"]
             answer = self.current_question["cevap"]
+            hint = self.current_question["hint"]
+            self.root.ids.game_card.ids.hint_label.text = hint
 
             # Her harf için input oluştur
             for i, char in enumerate(word):
@@ -293,8 +305,8 @@ class WordGameApp:
             self.root.ids.game_card.ids.next_button.disabled = True
         else:
             # Tüm sorular bittiğinde
-            self.root.ids.game_card.ids.question_label.text = "Oyun Bitti!"
-            self.root.ids.game_card.ids.instruction_label.text = f"Toplam puanınız: {self.score}"
+            self.root.ids.game_card.ids.question_label.text = self.app.lang_conv.get_value('word_game_restart')
+            self.root.ids.game_card.ids.instruction_label.text = f"{self.app.lang_conv.get_value('word_game_total_score')}: {self.score}"
             self.root.ids.game_card.ids.letter_boxes.clear_widgets()
 
     def reset_timer(self):
@@ -327,17 +339,17 @@ class WordGameApp:
         correct_answer = self.current_question["cevap"]
 
         if timeout:
-            self.root.ids.game_card.ids.result_label.text = f"Süre doldu! Doğru cevap: {correct_answer}"
+            self.root.ids.game_card.ids.result_label.text = f"{self.app.lang_conv.get_value('word_game_timeout')} {self.app.lang_conv.get_value('word_game_correct_answer')}: {correct_answer}"
             self.root.ids.game_card.ids.result_label.theme_text_color = "Error"
         elif user_answer.upper() == correct_answer.upper():
             # Doğru cevap, puan ekle
             self.score += int(self.timer_value / 10)  # Kalan süreye göre puan ver
-            self.root.ids.game_card.ids.score_label.text = f"Puan: {self.score}"
-            self.root.ids.game_card.ids.result_label.text = "Doğru Cevap!"
+            self.root.ids.game_card.ids.score_label.text = f"{self.app.lang_conv.get_value('word_game_score')}: {self.score}"
+            self.root.ids.game_card.ids.result_label.text = self.app.lang_conv.get_value('word_game_correct_answer')
             self.root.ids.game_card.ids.result_label.theme_text_color = "Custom"
             self.root.ids.game_card.ids.result_label.text_color = (0, 0.7, 0, 1)  # Yeşil
         else:
-            self.root.ids.game_card.ids.result_label.text = f"Yanlış! Doğru cevap: {correct_answer}"
+            self.root.ids.game_card.ids.result_label.text = f"{self.app.lang_conv.get_value('word_game_wrong_answer')} {self.app.lang_conv.get_value('word_game_correct_answer')}: {correct_answer}"
             self.root.ids.game_card.ids.result_label.theme_text_color = "Error"
 
         # Tüm giriş kutularını salt okunur yap

@@ -34,7 +34,7 @@ MDScreen:
                 size_hint_y: 0.15
             
             MDLabel:
-                text: "Hoş Geldiniz"
+                text: app.lang_conv.get_value('sign_welcome')
                 halign: "center"
                 font_style: "H4"
                 adaptive_height: True
@@ -51,8 +51,8 @@ MDScreen:
                 
                 MDTextField:
                     id: email_field
-                    hint_text: "E-posta"
-                    helper_text: "Geçerli bir e-posta adresi giriniz"
+                    hint_text: app.lang_conv.get_value('sign_mail_field')
+                    helper_text: app.lang_conv.get_value('sign_mail_hint')
                     helper_text_mode: "on_focus"
                     icon_right: "email"
                     mode: "rectangle"
@@ -62,8 +62,8 @@ MDScreen:
                 MDTextField:
                     mode: "rectangle"
                     id: password_field
-                    hint_text: "Şifre"
-                    helper_text: "Şifrenizi giriniz"
+                    hint_text: app.lang_conv.get_value('sign_password_field')
+                    helper_text: app.lang_conv.get_value('sign_password_hint')
                     helper_text_mode: "on_focus"
                     icon_right: "eye-off"
                     mode: "rectangle"
@@ -83,13 +83,13 @@ MDScreen:
                         size_hint_x: 0.5
                         
                     MDFlatButton:
-                        text: "Şifremi Unuttum"
+                        text: app.lang_conv.get_value('sign_forgot_password')
                         theme_text_color: "Custom"
                         text_color: app.theme_cls.primary_color
                         on_release: app.sign_in_app.goto_forgot_password()
                 
                 MDRaisedButton:
-                    text: "Giriş Yap"
+                    text: app.lang_conv.get_value('sign_button')
                     pos_hint: {"center_x": .5}
                     size_hint_x: 0.8
                     on_release: app.sign_in_app.signin()
@@ -100,20 +100,20 @@ MDScreen:
                     spacing: "8dp"
                     
                     MDLabel:
-                        text: "veya"
+                        text: app.lang_conv.get_value('sign_or_text')
                         halign: "center"
                         theme_text_color: "Secondary"
                         adaptive_height: True
                         
                     MDRaisedButton:
-                        text: "Google ile Giriş Yap"
+                        text: app.lang_conv.get_value('sign_wth_google')
                         pos_hint: {"center_x": .5}
                         size_hint_x: 0.8
                         md_bg_color: [0.9, 0.3, 0.3, 1]
                         on_release: app.sign_in_app.google_signin()
                         
             MDFlatButton:
-                text: "Hesabınız yok mu? Kayıt Olun"
+                text: app.lang_conv.get_value('sign_to_register_button')
                 theme_text_color: "Custom"
                 text_color: app.theme_cls.primary_color
                 pos_hint: {"center_x": .5}
@@ -179,7 +179,7 @@ class SignIn:
             
             
             if not email.strip() or not password.strip():
-                SnackBar.callSnackBar(text="Lütfen e-posta ve şifre girin", bg_color=self.app.theme_cls.error_color)
+                SnackBar.callSnackBar(text= self.app.lang_conv.get_value('sign_warn_fill_form'), bg_color=self.app.theme_cls.error_color)
                 return
             
             
@@ -189,19 +189,19 @@ class SignIn:
             
             # Şimdilik basit bir simülasyon
             if auth_client.signin(email, password):
-                SnackBar.callSnackBar(text="Giriş başarılı!", bg_color=self.app.theme_cls.primary_color)
+                SnackBar.callSnackBar(text=self.app.lang_conv.get_value('sign_success'), bg_color=self.app.theme_cls.primary_color)
                 # Başarılı girişten sonra ana menüye yönlendirme
                 # self.app.back_to_menu()
                 self.app.load_menu()
             else:
-                SnackBar.callSnackBar(text="Giriş başarısız. Bilgilerinizi kontrol edin.", bg_color=self.app.theme_cls.error_color)
+                SnackBar.callSnackBar(text=self.app.lang_conv.get_value('sign_fail'), bg_color=self.app.theme_cls.error_color)
                 
         except Exception as e:
             SnackBar.callSnackBar(text=f"Hata: {e}", bg_color=self.app.theme_cls.error_color)
 
     def google_signin(self):
         """Google ile giriş işlemini gerçekleştirir"""
-        SnackBar.callSnackBar(text="Google ile giriş işlemi başlatılıyor...", bg_color=self.app.theme_cls.primary_color)
+        SnackBar.callSnackBar(text=self.app.lang_conv.get_value('sign_begin_google_sign'), bg_color=self.app.theme_cls.primary_color)
         from Registiration.google_oauth import google_signin
         google_signin(self)
         # Bu fonksiyon Google OAuth entegrasyonu gerektirir (ileride implementasyonu yapılacak)

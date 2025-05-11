@@ -1,7 +1,7 @@
-import jwt.algorithms
+# import jwt.algorithms
 import requests
-import json
-import os
+# import json
+# import os
 from kivymd.app import MDApp 
 from kivy.storage.jsonstore import JsonStore
 from components.SnackBar import SnackBar
@@ -17,30 +17,33 @@ class AuthClient:
     def signup(self, name, email, password):
         """Register a new user with email and password"""
         try:
-            url = f"{self.api_url}/auth/signup"
+            url = f"{self.api_url}/register/auth/signup"
             response = requests.post(
                 url, 
                 json={
-                    "name": name,
+                    #------------------28-04-2025-sign up------------------------------
+                    "username": name,
+                    #------------------28-04-2025-sign up------------------------------
                     "email": email,
                     "password": password
                 },
                 timeout=10
             )
             
-            
+            #------------------28-04-2025-sign up------------------------------
             if response.status_code == 201:
-                SnackBar.callSnackBar(text="Kayıt başarılı! Giriş yapabilirsiniz.", bg_color=self.app.theme_cls.primary_color)
+                SnackBar.callSnackBar(text="Kayıt başarılı! Giriş yapabilirsiniz.", bg_color=MDApp.get_running_app().theme_cls.primary_color)
                 return True
             else:
                 error_data = response.json()
                 SnackBar.callSnackBar(text=f"Kayıt hatası: {error_data.get('message', 'Bilinmeyen hata')}", 
-                                     bg_color=self.app.theme_cls.error_color)
+                                     bg_color=MDApp.get_running_app().theme_cls.primary_color)
                 return False
                 
         except Exception as e:
-            SnackBar.callSnackBar(text=f"Bağlantı hatası: {str(e)}", bg_color=self.app.theme_cls.error_color)
+            SnackBar.callSnackBar(text=f"Bağlantı hatası: {str(e)}", bg_color=MDApp.get_running_app().theme_cls.primary_color)
             return False
+        #------------------28-04-2025-sign up------------------------------
             
     def signin(self, email, password):
         """Login with email and password"""
